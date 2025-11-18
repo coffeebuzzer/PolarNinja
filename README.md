@@ -130,3 +130,5 @@ In other words: end of show → press RESET → the system is back to a known, s
 ```bash
 git clone https://github.com/coffeebuzzer/PolarNinja.git
 cd PolarNinja
+
+See CHANGELOG.md for version history and details on v0.7-golden
