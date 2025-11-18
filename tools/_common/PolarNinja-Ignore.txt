@@ -1,0 +1,21 @@
+# Lines starting with # are comments.
+# Paths are relative to C:\PolarNinja and are CASE-INSENSITIVE.
+
+assets\archive\
+**\__pycache__\
+logs\
+_cleanup_\
+_duplicates_*
+*.pyc
+*.pyo
+*.tmp
+*.log
+*.bak
+# Very large raw media you don't want in a shareable build (add/adjust as needed)
+*.wav
+*.psd
+*.tif
+*.tiff
+*.mov
+*.mp4
+*.mkv

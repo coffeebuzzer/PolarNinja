@@ -1,0 +1,15 @@
+{
+  "name": "LE062_10ch",
+  "channels": {
+    "1": "Master Dimmer",
+    "2": "Red",
+    "3": "Green",
+    "4": "Blue",
+    "5": "Macro/White",
+    "6": "Effects",
+    "7": "Strobe",
+    "8": "Macro Speed",
+    "9": "Unused",
+    "10": "Unused"
+  }
+}

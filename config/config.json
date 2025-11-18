@@ -1,0 +1,13 @@
+{
+  "com_port": "COM11",
+  "baud": 57600,
+  "frame_rate": 40,
+  "start_address": 1,
+  "channels_per_fixture": 10,
+  "num_fixtures": 38,
+  "songs": {
+    "CUE 19 - UNLOADING": "C:/polarexpressninja/CUE 19 - UNLOADING.mp3",
+    "CUE 20 - HEAD ELF": "C:/polarexpressninja/CUE 20 - HEAD ELF SCENE.mp3",
+    "CUE 21 - ROCKIN": "C:/polarexpressninja/CUE 21 - ROCKIN.mp3"
+  }
+}

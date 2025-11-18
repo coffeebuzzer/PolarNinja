@@ -1,0 +1,12 @@
+{
+  "beta_label": "Polar Ninja - Beta .05",
+  "online_mode": false,
+  "dmx_com_port": 11,
+  "music_dir": "C:\\PolarNinja\\music",
+  "assets_dir": "C:\\\\polarexpressninja\\\\polar_waveforms\\\\",
+  "songs": {
+    "19": "C:\\PolarNinja\\music\\CUE 19 - UNLOADING.mp3",
+    "20": "C:\\PolarNinja\\music\\CUE 20 - HEAD ELF SCENE.mp3",
+    "21": "C:\\PolarNinja\\music\\CUE 21 - ROCKIN.mp3"
+  }
+}

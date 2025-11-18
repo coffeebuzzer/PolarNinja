@@ -1,0 +1,17 @@
+{
+  "com_port": "COM11",        // legacy, OK to keep
+  "dmx_com_port": 11,         // NEW: explicit for DMXEngine
+  "baud": 57600,
+  "frame_rate": 40,
+  "start_address": 1,
+  "channels_per_fixture": 10,
+  "num_fixtures": 38,
+
+  "assets_dir": "C:/PolarNinja/assets",   // optional but nice
+
+  "songs": {
+    "19": "C:/PolarNinja/music/CUE 19 - UNLOADING.mp3",
+    "20": "C:/PolarNinja/music/CUE 20 - HEAD ELF SCENE.mp3",
+    "21": "C:/PolarNinja/music/CUE 21 - ROCKIN.mp3"
+  }
+}

@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Logs / temp
+logs/
+*.log
+*.err
+*.bak
+*.tmp
+
+# Big assets we don't want in Git
+assets/archive/
+assets/*.wav
+
+# Bundles / zips
+*.zip
+
+# Build artifacts
+dist/
+build/
+*.spec
+
+# OS/editor
+.DS_Store
+Thumbs.db
+

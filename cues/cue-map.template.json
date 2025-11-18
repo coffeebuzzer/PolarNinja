@@ -1,0 +1,20 @@
+{
+  "CUE 19 - UNLOADING": [
+    {
+      "t": 0.0,
+      "pattern": "Idle"
+    }
+  ],
+  "CUE 20 - HEAD ELF": [
+    {
+      "t": 0.0,
+      "pattern": "AllWhiteLow"
+    }
+  ],
+  "CUE 21 - ROCKIN": [
+    {
+      "t": 0.0,
+      "pattern": "RockinRedGreen"
+    }
+  ]
+}
