@@ -1,13 +1,13 @@
 from PySide6.QtWidgets import QApplication, QWidget, QPushButton, QLabel, QVBoxLayout, QHBoxLayout
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QTimer
 from PySide6.QtGui import QFont
 import sys, os, json, math
 
-from modules.settings import load_settings, save_settings
+from modules.settings import load_settings
 from modules.dmx_engine import DMXEngine
 from modules.audio import AudioEngine
 from modules.rockin_modes import RockinModes
-from ui.widgets import CircleButton, SeekBar, DMXStatus
+from ui.widgets import CircleButton, SeekBar
 from ui.dots import DotBar
 
 
@@ -15,7 +15,7 @@ class App(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Polar Ninja - Beta .07 - Designed by Dustin")
+        self.setWindowTitle("Polar Ninja - Beta .08 - Designed by Dustin")
         self.setStyleSheet(
             "QWidget{background:#000;color:#fff;}"
             "QLabel{color:#fff;}"
@@ -28,13 +28,19 @@ class App(QWidget):
         if hasattr(self.audio, "set_assets_dir"):
             self.audio.set_assets_dir(self.cfg.get("assets_dir"))
 
+        # Pre-warm core cue sounds so overlays don't glitch when we hit CUE 20
+        for cid in ("19", "20", "21"):
+            path = self.cfg["songs"].get(cid)
+            if path and os.path.exists(path):
+                self.audio.warm_sound(path)
+
         # DMX engine + status callback
         dmx_port = self.cfg.get("dmx_com_port", 11)
         self.dmx = DMXEngine(dmx_port, status_cb=self._set_dmx_status)
         self.dmx.start()
 
         self.rockin = RockinModes(38)
-        self.rockin.set_mode(1)  # Example 1 selected
+        self.rockin.set_mode(1)
         self.beats = []
         self.last_beat_index = -1
 
@@ -46,12 +52,16 @@ class App(QWidget):
         # For CUE 21 "All White Low Power" hold-to-reset
         self.c21_hold_white = False
 
+        # Track cue state so we know when we’re doing 19 -> 20
+        self.current_cue = None
+        self.prev_cue = None
+
         # ------------------------------------------------------------------
         # TOP BAR: title + DMX status
         # ------------------------------------------------------------------
         top = QHBoxLayout()
 
-        title = QLabel("Polar Ninja - Beta .07 - Designed by Dustin")
+        title = QLabel("Polar Ninja - Beta .08 - Designed by Dustin")
         title.setFont(QFont("Segoe UI", 12))
         top.addWidget(title)
         top.addStretch(1)
@@ -171,6 +181,7 @@ class App(QWidget):
 
         # Initial state
         self.current_cue = "19"
+        self.prev_cue = None
         self._load_song_for_cue("19", auto_play=False)
 
     # ======================================================================
@@ -205,11 +216,13 @@ class App(QWidget):
         self.white_fade_t0 = None
         self.c21_hold_white = False
         self.current_cue = "19"
+        self.prev_cue = None
         self._load_song_for_cue("19", auto_play=False)
 
-    def _on_seek_ratio(self, x):
+    def _on_seek_ratio(self, x: float):
         if self.audio.length > 0:
             sec = x * self.audio.length
+            # restart playback at new position (main channel only)
             self.audio.play(start_sec=sec)
             if self.beats:
                 self.last_beat_index = -1
@@ -238,16 +251,52 @@ class App(QWidget):
     # CUES
     # ======================================================================
 
-    def load_cue(self, cid, auto_play=True):
+    def load_cue(self, cid: str, auto_play: bool = True):
         """
         Load and optionally start a cue.
 
-        IMPORTANT: For now we do *no* audio crossfade logic.
-        If auto_play=True, the new cue starts immediately.
+        Special behavior:
+        - When jumping from CUE 19 to CUE 20 while 19 is playing,
+          keep 19 fading out for 2 seconds while 20 starts at full volume.
         """
+        prev = self.current_cue
+        self.prev_cue = prev
         self.current_cue = cid
         self.white_fade_t0 = None
 
+        # --- Special case: CUE 19 -> CUE 20 tail fade + instant 20 ---
+        if prev == "19" and cid == "20":
+            # 1) Start CUE 20 on overlay channel at full volume
+            path20 = self.cfg["songs"].get("20")
+            self.audio.play_overlay(path20)
+
+            # 2) Start a 2s manual tail fade on CUE 19 (main mixer.music)
+            self.audio.start_tail_fade(2.0)
+
+            # Update cue button styles to show 20 as active
+            self._reset_cue_button_styles()
+            {
+                "19": self.c19,
+                "20": self.c20,
+                "21": self.c21,
+            }[cid].setStyleSheet(
+                "QPushButton{color:#000;background:#16a34a;"
+                "border:2px solid #4ade80;padding:10px;}"
+            )
+
+            # Update right-hand duration label using overlay length
+            dur = max(0.0, self.audio.length or 0.0)
+            m = int(dur // 60)
+            s = int(dur % 60)
+            self.lbl_r.setText(f"{m:02d}:{s:02d}")
+
+            # For CUE 20 we don't use beats; ensure it's clean
+            self.beats = []
+            self.last_beat_index = -1
+
+            return
+
+        # --- Normal path for all other cue loads (19, 20 standalone, 21) ---
         self._load_song_for_cue(cid, auto_play=False)
 
         self._reset_cue_button_styles()
@@ -268,8 +317,11 @@ class App(QWidget):
 
         if cid == "21":
             self.last_beat_index = -1
+            # Reset hold-white state whenever we start CUE 21
+            self.c21_hold_white = False
+            self.white_fade_t0 = None
 
-    def _load_song_for_cue(self, cid, auto_play=False):
+    def _load_song_for_cue(self, cid: str, auto_play: bool = False):
         path = self.cfg["songs"].get(cid)
         if path and os.path.exists(path):
             self.audio.load(path)
@@ -297,7 +349,7 @@ class App(QWidget):
     # COLOR HELPERS
     # ======================================================================
 
-    def _current_fade_cols(self, t):
+    def _current_fade_cols(self, t: float):
         x = (math.sin(t * 1.0) + 1) / 2
         cols = []
         for i in range(38):
@@ -307,7 +359,7 @@ class App(QWidget):
                 cols.append((int(255 * (1 - x)), int(255 * x), 0))
         return cols
 
-    def _blend_cols(self, cols_a, cols_b, alpha):
+    def _blend_cols(self, cols_a, cols_b, alpha: float):
         out = []
         a = max(0.0, min(1.0, float(alpha)))
         for (r1, g1, b1), (r2, g2, b2) in zip(cols_a, cols_b):
@@ -322,6 +374,9 @@ class App(QWidget):
     # ======================================================================
 
     def _tick(self):
+        # Let audio engine update fades/ramp first
+        self.audio.update()
+
         dur = max(0.01, self.audio.length or 0.01)
         pos = max(0.0, self.audio.get_pos())
 
@@ -337,97 +392,55 @@ class App(QWidget):
 
         # ---- CUE 20 ----
         elif self.current_cue == "20":
-            # Timeline based on your notes:
-            # 0:00.0  "Red Green Fade"            -> baseline alternating
-            # 0:38.9  "Red Side Left"
-            # 0:40.2  "Green Side Right"
-            # 0:41.9  "Red Side Left"
-            # 0:43.2  "Green Side Right"
-            # 0:45.0  "Red Side Left"
-            # 0:46.1  "Green Side Right"
-            # 0:48.0  "Red Green Fade"  (WOW #1)  -> 2s fade into alternating
-            # 1:07.5  "Green Side Right"
-            # 1:08.6  "Red Side Left"
-            # 1:10.1  "Green Side Right"
-            # 1:11.7  "Red Side Left"
-            # 1:13.1  "Green Side Right"
-            # 1:14.6  "Red Side Left"
-            # 1:16.1  "Red Green Fade"  (WOW #2)  -> 2s fade into alternating
-            # 3:07.0  "All White Low Power"       -> smooth 3s fade to white
-
             cols = [(0, 0, 0)] * 38
 
-            # Convenience helpers
             def red_left():
                 return [(255, 0, 0)] * 19 + [(0, 0, 0)] * 19
 
             def green_right():
                 return [(0, 0, 0)] * 19 + [(0, 255, 0)] * 19
 
-            base_cols = self._current_fade_cols(pos)  # alternating pattern
+            base_cols = self._current_fade_cols(pos)
 
             if pos < 38.9:
-                # Intro: pure alternating red/green
                 cols = base_cols
-
             elif pos < 40.2:
                 cols = red_left()
-
             elif pos < 41.9:
                 cols = green_right()
-
             elif pos < 43.2:
                 cols = red_left()
-
             elif pos < 45.0:
                 cols = green_right()
-
             elif pos < 46.1:
                 cols = red_left()
-
             elif pos < 48.0:
                 cols = green_right()
-
-            # WOW #1: 48.0 -> 50.0, fade from green_right to alternating
             elif pos < 50.0:
                 alpha = min(1.0, max(0.0, (pos - 48.0) / 2.0))
                 start_cols = green_right()
                 cols = self._blend_cols(start_cols, base_cols, alpha)
-
-            # Between WOW #1 and the next split: pure alternating
             elif pos < 67.5:
                 cols = base_cols
-
             elif pos < 68.6:
                 cols = green_right()
-
             elif pos < 70.1:
                 cols = red_left()
-
             elif pos < 71.7:
                 cols = green_right()
-
             elif pos < 73.1:
                 cols = red_left()
-
             elif pos < 74.6:
                 cols = green_right()
-
             elif pos < 76.1:
                 cols = red_left()
-
-            # WOW #2: 76.1 -> 78.1, fade from red_left to alternating
             elif pos < 78.1:
                 alpha = min(1.0, max(0.0, (pos - 76.1) / 2.0))
                 start_cols = red_left()
                 cols = self._blend_cols(start_cols, base_cols, alpha)
-
-            # After WOW #2 until white-fade: alternating
             elif pos < 187.0:
                 cols = base_cols
-
             else:
-                # 3:07 and beyond: smooth 3s fade into all white low power
                 if self.white_fade_t0 is None:
                     self.white_fade_t0 = pos
                 alpha = min(1.0, (pos - self.white_fade_t0) / self.white_fade_dur)
@@ -438,29 +451,28 @@ class App(QWidget):
 
         # ---- CUE 21 ----
         else:
-            # When we've flipped into "All White Low Power", hold it until reset
+            # CUE 21 (ROCKIN)
             if self.c21_hold_white:
+                # Once we hit all white, stay here until RESET is pressed
                 cols = [(240, 240, 240)] * 38
                 self.dots.set_colors(cols)
             else:
-                # Built-in ROCKIN pattern: slower back-and-forth red/green
-                # 2 flips per second instead of hyper-fast.
-                step = int(pos * 2.0) % 2  # slower than before
+                # 0:00.0 -> 2:30.4  Rockin Red/Green
+                step = int(pos * 2.0) % 2
 
                 cols = []
                 for i in range(38):
                     if (i + step) % 2 == 0:
-                        cols.append((255, 0, 0))   # red
+                        cols.append((255, 0, 0))
                     else:
-                        cols.append((0, 255, 0))   # green
+                        cols.append((0, 255, 0))
 
-                self.dots.set_colors(cols)
-
-                # End of song: snap to all-white-low and hold there
-                if pos > 0 and (dur - pos) < 0.1:
+                # Switch to all white at 2:30.5 and hold
+                if pos >= 150.5:
                     self.c21_hold_white = True
                     cols = [(240, 240, 240)] * 38
-                    self.dots.set_colors(cols)
+
+                self.dots.set_colors(cols)
 
 
 def main():

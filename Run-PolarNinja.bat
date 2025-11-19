@@ -1,7 +1,7 @@
 @echo off
 setlocal ENABLEDELAYEDEXPANSION
 
-title Polar Ninja - Beta .06
+title Polar Ninja - Beta .08
 
 REM Jump to the folder this script lives in
 cd /d "%~dp0"

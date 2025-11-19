@@ -14,11 +14,15 @@ with synchronized audio, DMX status feedback, and a simple, dark UI that’s eas
 
 ## Status
 
-> **Version:** `Beta 0.7 (Golden)`  
+> **Version:** `Beta 0.8` (successor to `v0.7-golden`)  
 > **Use case:** Show-ready build for live operation  
 > **Platform:** Windows (tested on Python 3.11)
 
-This repo represents the **Golden Beta 0.7** build – the one that’s actually safe to run a show with.
+This repo now represents the **Beta 0.8** build, which builds on `v0.7-golden` by:
+
+- Adding a smooth, **no-gap 19 → 20 audio handoff** (20 comes in instantly while 19 tails out).
+- Tightening **CUE 21’s “All White Low Power”** timing to a specific musical moment.
+- Ensuring **Pause** always freezes audio, timer, and DMX together – even during the special 19 → 20 transition.
 
 ---
 
@@ -31,16 +35,25 @@ Three big cue buttons across the top:
 - **CUE 19 – UNLOADING**
   - Plays the unloading track.
   - Drives a **smooth alternating red/green fade** across the dot bar to match the scene.
+
 - **CUE 20 – HEAD ELF**
-  - Instant start when you press the button (no audio crossfade logic).
+  - When triggered on its own:
+    - Starts immediately and runs like a normal cue.
+  - When triggered while **CUE 19 is already playing**:
+    - **CUE 20 starts instantly at full volume** on a dedicated overlay channel.
+    - **CUE 19 keeps playing underneath**, then fades out smoothly over about **2 seconds**.
+    - There is **no “dead air” gap** between the cues.
   - DMX timeline for the show:
-    - Red / Green side splits.
+    - Red / Green side splits (left red / right green, then swapped).
     - Two **WOW** moments where the lights **fade over ~2 seconds** from split looks into a full red/green alternating pattern.
-    - At ~3:07 the lights perform a **smooth 3-second fade to all-white low power**.
+    - At ~3:07 the lights perform a **smooth 3-second fade to All White Low Power**.
+
 - **CUE 21 – ROCKIN’**
   - Simple, beat-inspired **red/green “rockin” pattern** across 38 DMX “pixels”.
-  - Pattern rocks back and forth at a **slower, more musical tempo** (2 flips per second).
-  - At the end of the track, everything snaps to **all-white low power and holds** until reset.
+  - Pattern rocks back and forth at a **slower, more musical tempo** (about 2 flips per second).
+  - At **~2:30.5**, the dot bar flips to **All White Low Power**:
+    - Stays all white even after the track ends.
+    - Remains white until the operator presses **RESET**.
 
 All cue buttons:
 
@@ -71,15 +84,19 @@ This is intended as a **pre-show sanity check** so the operator can see at a gla
 
 A 38-“pixel” dot bar along the bottom represents your DMX universe visually:
 
-- CUE 19  
+- **CUE 19**  
   → Smooth red/green sine-wave fade across all dots.
-- CUE 20  
+
+- **CUE 20**  
   → Lighting choreography that follows the Head Elf script:
   - Side-split looks (all left red, all right green, and vice versa).
   - WOW moments: **2-second fades into the full red/green alternating look**.
-  - Long fade into all-white low power at the end.
-- CUE 21  
-  → Red/green pattern that shifts back and forth in time with the track, then holds all-white low power at the end.
+  - Long fade into All White Low Power at the end.
+
+- **CUE 21**  
+  → Red/green pattern that shifts back and forth in time with the track, then:
+  - At ~2:30.5, the bar flips to **All White Low Power**.
+  - White is held until **RESET**, even after the audio stops.
 
 The bar is purely **visual feedback** for the operator in this build; DMX output itself is handled by the DMX engine + external fixtures.
 
@@ -91,7 +108,7 @@ Below the cue buttons:
 
 - **Seek bar** with time labels (elapsed / total).
 - **Transport controls:**
-  - Play (green circle)
+  - Play
   - Pause
   - Stop
 
@@ -99,6 +116,12 @@ You can:
 
 - Use the **seek bar** to jump within a track.
 - See run time clearly in a dark environment via the bright time readouts.
+
+In Beta 0.8, **Pause**:
+
+- Freezes audio for both the main cue and any overlay cue.
+- Freezes the timeline and DMX dot-bar animation.
+- Resumes cleanly from the same moment when un-paused.
 
 ---
 
@@ -113,7 +136,7 @@ When pressed:
 - De-highlights all cue buttons.
 - Resets internal state so the system is ready to run **CUE 19** for the next train.
 
-In other words: end of show → press RESET → the system is back to a known, safe **“ready”** state.
+End of show → press RESET → system returns to a known, safe **“ready”** state.
 
 ---
 
@@ -130,5 +153,3 @@ In other words: end of show → press RESET → the system is back to a known, s
 ```bash
 git clone https://github.com/coffeebuzzer/PolarNinja.git
 cd PolarNinja
-
-See CHANGELOG.md for version history and details on v0.7-golden

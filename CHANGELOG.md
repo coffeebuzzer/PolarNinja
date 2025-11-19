@@ -10,11 +10,71 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 _Planning / ideas for future builds:_
 
-- True dual-channel DJ-style crossfade between CUE 19 and CUE 20.
+- Configurable timing / length for the CUE 19 → 20 tail fade.
 - Configurable DMX fixture patch / mapping for the dot bar.
 - Optional advanced beat-driven RockinModes patterns for CUE 21.
 - Operator log / event view for tracking show runs.
 - Additional cues and layouts for other scenes.
+
+---
+
+## [v0.8-beta] – 2025-11-18
+
+> **Status:** Successor to **v0.7-golden** – adds a smooth 19→20 overlay handoff and tightens CUE 21’s “all white” ending. Intended as the new show build once verified in-room.
+
+### Added
+
+- **Dual-path audio engine for special cue transitions**
+  - `AudioEngine` now runs:
+    - The **main track** on `pygame.mixer.music`.
+    - A dedicated **overlay channel** (Channel 7) for special cases like CUE 20 over CUE 19.
+  - Simple **sound cache** warms (pre-decodes) the audio for CUE 19 / 20 / 21 at startup to avoid hiccups the first time a cue is hit.
+- **Overlay-aware pause / resume**
+  - Pause now freezes:
+    - The main track.
+    - Any active overlay track (e.g., CUE 20 when it’s running on top of 19).
+    - The **timeline and DMX dot-bar**.
+  - Resume correctly advances both clocks so audio + visuals stay locked together.
+
+### Changed
+
+- **CUE 19 → CUE 20 audio behavior (when 19 is playing)**
+  - Pressing **CUE 20 while CUE 19 is already playing** now:
+    - Starts **CUE 20 instantly at full volume** on the overlay channel.
+    - Keeps **CUE 19 playing underneath**, then fades it out smoothly over **~2 seconds** on the main channel.
+    - Eliminates the brief “dead air” / mute feeling from earlier betas.
+  - Pressing **CUE 20 while CUE 19 is *not* playing** still behaves like a normal single-cue start (no overlay needed).
+
+- **Pause / resume with overlays**
+  - In previous builds, pausing during a 19 → 20 transition could:
+    - Stop the audio, but
+    - Allow the **status timer and DMX dots to keep running**, as if the track were still playing.
+  - In v0.8:
+    - Pause freezes both the **audio** and the **visual timeline**, even when CUE 20 is running as an overlay.
+    - Resume picks up **audio + timer + DMX** from the same moment, no drift.
+
+- **CUE 21 – ROCKIN end-of-track behavior**
+  - The red/green “Rockin” pattern remains as in v0.7-golden.
+  - The switch to **All White Low Power** is now tied to a **specific musical moment**:
+    - `0:00.0 → 2:30.4` – Rockin red/green pattern across all 38 dots.
+    - At **`2:30.5`**, the dot bar flips to **All White Low Power** and stays there.
+  - Once in All White:
+    - The bar **stays white** even after the audio ends.
+    - It remains that way until the operator hits **RESET**.
+  - This replaces the older “near end-of-track” detection, which could be slightly fuzzy depending on runtime timing.
+
+### Fixed
+
+- **Audio gap when jumping from CUE 19 → CUE 20**
+  - Earlier betas could momentarily mute or “hiccup” all audio when pressing CUE 20 while 19 was already playing, due to MP3 decoding overhead at button press.
+  - v0.8 fixes this by:
+    - Pre-warming the sounds at launch.
+    - Running CUE 20 on a separate overlay channel.
+    - Keeping CUE 19 alive long enough to perform a clean 2-second tail fade.
+
+- **Paused CUE 20 timeline continuing in the background**
+  - When coming from 19 → 20, pausing could stop the music but leave the on-screen timer and DMX timeline moving.
+  - Now, **pause truly pauses everything** – both clocks, both channels, and the dot bar visuals.
 
 ---
 
@@ -49,7 +109,7 @@ _Planning / ideas for future builds:_
     - `0:46.1`  – Green Side Right  
   - Two **WOW** moments now have proper 2-second fades:
     - `0:48.0 → 0:50.0` – fade from “Green Side Right” into full red/green alternating pattern.  
-    - `1:16.1 → 1:18.1` – fade from “Red Side Left” into full red/green alternating pattern.
+    - `0:76.1 → 0:78.1` – fade from “Red Side Left” into full red/green alternating pattern.
   - Preserved the long, smooth **3-second fade into All White Low Power** starting at `3:07.0`.
 
 - **CUE 21 – ROCKIN pattern**
