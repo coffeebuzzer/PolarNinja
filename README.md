@@ -14,15 +14,18 @@ with synchronized audio, DMX status feedback, and a simple, dark UI that’s eas
 
 ## Status
 
-> **Version:** `Beta 0.8` (successor to `v0.7-golden`)  
-> **Use case:** Show-ready build for live operation  
-> **Platform:** Windows (tested on Python 3.11)
+> **Version:** `Beta 0.8.1`  
+> **Lineage:** `v0.7-golden` → `v0.8-beta` → `v0.8.1-beta`  
+> **Use case:** Show-ready build for live operation on Windows  
+> **Platform:** Tested on Python 3.11
 
-This repo now represents the **Beta 0.8** build, which builds on `v0.7-golden` by:
+`v0.8.1-beta` is a small but important fix on top of `v0.8-beta`:
 
-- Adding a smooth, **no-gap 19 → 20 audio handoff** (20 comes in instantly while 19 tails out).
-- Tightening **CUE 21’s “All White Low Power”** timing to a specific musical moment.
-- Ensuring **Pause** always freezes audio, timer, and DMX together – even during the special 19 → 20 transition.
+- Keeps the **smooth 19 → 20 overlay crossfade** (20 in instantly, 19 tails out over ~2s).
+- Keeps **CUE 21 all-white timing** (around 2:30.5, stays white until RESET).
+- Fixes a bug where **scrubbing CUE 20 from RESET** could cause CUE 19 and CUE 20 to play at the same time.
+
+For detailed history, see [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
@@ -35,30 +38,32 @@ Three big cue buttons across the top:
 - **CUE 19 – UNLOADING**
   - Plays the unloading track.
   - Drives a **smooth alternating red/green fade** across the dot bar to match the scene.
+  - Seek bar jumps cleanly if you scrub forward/backward.
 
 - **CUE 20 – HEAD ELF**
-  - When triggered on its own:
-    - Starts immediately and runs like a normal cue.
+  - When triggered on its own (e.g., from RESET):
+    - Starts as a normal single cue on the main audio channel.
+    - Scrubbing the seek bar jumps the audio and DMX timeline correctly.
   - When triggered while **CUE 19 is already playing**:
     - **CUE 20 starts instantly at full volume** on a dedicated overlay channel.
-    - **CUE 19 keeps playing underneath**, then fades out smoothly over about **2 seconds**.
-    - There is **no “dead air” gap** between the cues.
-  - DMX timeline for the show:
-    - Red / Green side splits (left red / right green, then swapped).
-    - Two **WOW** moments where the lights **fade over ~2 seconds** from split looks into a full red/green alternating pattern.
-    - At ~3:07 the lights perform a **smooth 3-second fade to All White Low Power**.
+    - **CUE 19 continues underneath**, then fades out smoothly over about **2 seconds**.
+    - No “dead air” between cues.
+  - The lighting timeline:
+    - Alternates **Red Side Left** / **Green Side Right** looks at specific timestamps.
+    - Has two **WOW fades** where we blend those side looks into a full red/green alternating pattern over ~2 seconds.
+    - Finishes with a **3-second fade to All White Low Power** near the end of the track.
 
 - **CUE 21 – ROCKIN’**
-  - Simple, beat-inspired **red/green “rockin” pattern** across 38 DMX “pixels”.
-  - Pattern rocks back and forth at a **slower, more musical tempo** (about 2 flips per second).
+  - Simple, beat-inspired **red/green “rockin” pattern** across 38 DMX “pixels.”
+  - Pattern rocks back and forth at a **comfortable, musical tempo** (about 2 flips per second).
   - At **~2:30.5**, the dot bar flips to **All White Low Power**:
-    - Stays all white even after the track ends.
+    - Stays white even after the track ends.
     - Remains white until the operator presses **RESET**.
 
 All cue buttons:
 
 - Highlight green when active.
-- Are big enough to confidently hit in the dark with cold fingers and a radio in the other hand.
+- Are large and easy to hit confidently in low light.
 
 ---
 
@@ -74,9 +79,9 @@ Top-right of the UI shows:
 Under the hood:
 
 - Uses `pyserial` to open the configured COM port (e.g., a DMXKing UltraDMX Micro).
-- Periodically pokes the port to detect unplug / error conditions and flip back to red if the device disappears.
+- Periodically talks to the port and flips the dot back to red if the device disappears.
 
-This is intended as a **pre-show sanity check** so the operator can see at a glance whether the DMX dongle is alive and talking.
+This gives the operator a quick **pre-show “is DMX alive?”** check.
 
 ---
 
@@ -84,21 +89,20 @@ This is intended as a **pre-show sanity check** so the operator can see at a gla
 
 A 38-“pixel” dot bar along the bottom represents your DMX universe visually:
 
-- **CUE 19**  
-  → Smooth red/green sine-wave fade across all dots.
+- **CUE 19**
+  - Smooth red/green sine-wave fade across all dots (ambient unloading look).
 
-- **CUE 20**  
-  → Lighting choreography that follows the Head Elf script:
-  - Side-split looks (all left red, all right green, and vice versa).
-  - WOW moments: **2-second fades into the full red/green alternating look**.
-  - Long fade into All White Low Power at the end.
+- **CUE 20**
+  - Lighting choreography that follows the Head Elf script:
+    - Side-split red/green looks (all left red, all right green, and vice versa).
+    - WOW moments with **2-second fades** into the full red/green alternating look.
+    - A long **fade to All White Low Power** at the end.
 
-- **CUE 21**  
-  → Red/green pattern that shifts back and forth in time with the track, then:
-  - At ~2:30.5, the bar flips to **All White Low Power**.
-  - White is held until **RESET**, even after the audio stops.
+- **CUE 21**
+  - Red/green pattern that shifts back and forth in time with the track.
+  - At ~2:30.5, flips to **All White Low Power** and holds until RESET.
 
-The bar is purely **visual feedback** for the operator in this build; DMX output itself is handled by the DMX engine + external fixtures.
+The dot bar is meant as **visual feedback** for the operator; actual DMX output is handled by the DMX engine and your real fixtures.
 
 ---
 
@@ -107,21 +111,23 @@ The bar is purely **visual feedback** for the operator in this build; DMX output
 Below the cue buttons:
 
 - **Seek bar** with time labels (elapsed / total).
-- **Transport controls:**
-  - Play
-  - Pause
-  - Stop
+- Circular **Play**, **Pause**, and **Stop** transport controls.
 
-You can:
+Behavior:
 
-- Use the **seek bar** to jump within a track.
-- See run time clearly in a dark environment via the bright time readouts.
+- **Play** – Starts or resumes playback.
+- **Pause** – Freezes:
+  - Audio (main + overlay if present),
+  - The timeline,
+  - The DMX dot-bar animation.
+- **Stop** – Stops audio and returns the transport to the beginning of the current cue.
 
-In Beta 0.8, **Pause**:
+Scrubbing the seek bar:
 
-- Freezes audio for both the main cue and any overlay cue.
-- Freezes the timeline and DMX dot-bar animation.
-- Resumes cleanly from the same moment when un-paused.
+- Works for all three cues.
+- In `v0.8.1-beta`, scrubbing during CUE 20 works correctly whether you:
+  - Came straight from RESET, or
+  - Came from a true 19 → 20 transition.
 
 ---
 
@@ -129,14 +135,12 @@ In Beta 0.8, **Pause**:
 
 A big **RESET** button on the bottom right:
 
-When pressed:
-
-- Stops audio.
+- Stops any playing audio.
 - Clears all lights (dot bar goes black).
 - De-highlights all cue buttons.
-- Resets internal state so the system is ready to run **CUE 19** for the next train.
+- Resets internal state so the system is ready to start **CUE 19** for the next train.
 
-End of show → press RESET → system returns to a known, safe **“ready”** state.
+This is your **“end-of-show, prepare for next train”** button.
 
 ---
 

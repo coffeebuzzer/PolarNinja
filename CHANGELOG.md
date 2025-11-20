@@ -18,9 +18,58 @@ _Planning / ideas for future builds:_
 
 ---
 
+## [v0.8.1-beta] – 2025-11-19
+
+> **Status:** Small but important bugfix on top of `v0.8-beta`. This is the version you actually want on the show laptop.
+
+### Fixed
+
+- **CUE 20 seeking from RESET causing “double audio” (19 + 20 together)**  
+  - Scenario:
+    - Press **RESET** (system goes to a clean slate, with 19 “selected” but not playing).
+    - Press **CUE 20** (Head Elf) directly from reset.
+    - Then click somewhere in the **seek bar** (e.g., middle of the track).
+  - In `v0.8-beta`:
+    - The app mistakenly treated this as a “19 → 20 special handoff” even though **19 never actually played**.
+    - Result: scrubbing during CUE 20 could cause:
+      - **CUE 19 to start playing** on the main channel from the seek time.
+      - **CUE 20 to keep playing** on the overlay channel.
+      - The **dot bar timeline** to not jump forward the way 19 and 21 do.
+  - In `v0.8.1-beta`:
+    - The special 19 → 20 overlay logic now only runs if:
+      - `prev == "19"` **and**
+      - `cid == "20"` **and**
+      - the main audio engine has actually started playback (i.e., 19 was really playing).
+    - From RESET:
+      - Clicking **CUE 20** now loads and plays 20 as a **normal single cue** on the main channel.
+      - Scrubbing the seek bar:
+        - Plays **only CUE 20**, no hidden 19 audio.
+        - Advances the dot bar and time display as expected.
+
+### Behavior confirmed in v0.8.1-beta
+
+- **CUE 19 – UNLOADING**
+  - Play / pause / stop all work normally.
+  - Scrubbing the seek bar jumps audio and DMX where expected.
+
+- **CUE 20 – HEAD ELF**
+  - From RESET → CUE 20:
+    - Plays only CUE 20.
+    - Scrubbing behaves like CUE 19 and CUE 21 (no double audio, dot bar jumps).
+  - From live **CUE 19 → CUE 20**:
+    - CUE 20 starts instantly at full volume on an overlay channel.
+    - CUE 19 fades out smoothly over ~2 seconds on the main channel.
+    - Pause freezes audio, timer, and DMX together; unpause resumes cleanly.
+
+- **CUE 21 – ROCKIN**
+  - Red/green “rockin” pattern runs as designed.
+  - At **~2:30.5**, dot bar flips to **All White Low Power** and **stays white** until RESET is pressed.
+
+---
+
 ## [v0.8-beta] – 2025-11-18
 
-> **Status:** Successor to **v0.7-golden** – adds a smooth 19→20 overlay handoff and tightens CUE 21’s “all white” ending. Intended as the new show build once verified in-room.
+> **Status:** Successor to **v0.7-golden** – adds a smooth 19→20 overlay handoff and tightens CUE 21’s “all white” ending. Superseded by `v0.8.1-beta` for show use.
 
 ### Added
 
@@ -41,9 +90,9 @@ _Planning / ideas for future builds:_
 - **CUE 19 → CUE 20 audio behavior (when 19 is playing)**
   - Pressing **CUE 20 while CUE 19 is already playing** now:
     - Starts **CUE 20 instantly at full volume** on the overlay channel.
-    - Keeps **CUE 19 playing underneath**, then fades it out smoothly over **~2 seconds** on the main channel.
+    - Keeps **CUE 19 playing underneath**, then fades it out smoothly over **~2 seconds**.
     - Eliminates the brief “dead air” / mute feeling from earlier betas.
-  - Pressing **CUE 20 while CUE 19 is *not* playing** still behaves like a normal single-cue start (no overlay needed).
+  - Pressing **CUE 20 while CUE 19 is *not* playing** still behaves like a normal single-cue start (no overlay needed in 0.8).
 
 - **Pause / resume with overlays**
   - In previous builds, pausing during a 19 → 20 transition could:
@@ -80,7 +129,7 @@ _Planning / ideas for future builds:_
 
 ## [v0.7-golden] – 2025-11-17
 
-> **Status:** Show-ready, pinned as the **Golden Beta .07** build.
+> **Status:** Show-ready, pinned as the **Golden Beta .07** build. Superseded by v0.8+.
 
 ### Added
 - **DMX status dot** in the top-right:
@@ -120,7 +169,7 @@ _Planning / ideas for future builds:_
 
 - **UI polish**
   - Confirmed layout for:
-    - Title bar with version string: `Polar Ninja - Beta .07 - Designed by Dustin`.
+    - Title bar with version string.
     - CUE 19 / 20 / 21 buttons row directly under the title.
     - Seek bar + elapsed / total time labels.
     - Circular Play / Pause / Stop transport controls.
@@ -141,18 +190,10 @@ _Planning / ideas for future builds:_
 
 These versions were internal / experimental and are not individually tagged in this repo. Highlights include:
 
-- **Beta 0.6 and earlier**
-  - Initial PySide6 dark-mode UI.
-  - Basic CUE 19 / 20 / 21 playback wiring.
-  - First versions of the dot-bar visualizer.
-  - Early DMX connection indicator using an “Online/Offline” pill instead of a simple dot.
-  - Prototype RockinModes beat-based patterns and tools for waveform/beat analysis.
+- Initial PySide6 dark-mode UI.
+- Basic CUE 19 / 20 / 21 playback wiring.
+- First versions of the dot-bar visualizer.
+- Early DMX connection indicator using an “Online/Offline” pill instead of a simple dot.
+- Prototype RockinModes beat-based patterns and tools for waveform/beat analysis.
 
 These builds informed the final layout and behavior of `v0.7-golden` but are not recommended for live show use.
-
----
-
-## Notes
-
-- This changelog is focused on **operator-visible behavior** and **show safety**.
-- Internal refactors, minor style tweaks, and comment changes may not be listed unless they affect how the app is used during a live show.

@@ -15,7 +15,7 @@ class App(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Polar Ninja - Beta .08 - Designed by Dustin")
+        self.setWindowTitle("Polar Ninja - Beta .08-1 - Designed by Dustin")
         self.setStyleSheet(
             "QWidget{background:#000;color:#fff;}"
             "QLabel{color:#fff;}"
@@ -61,7 +61,7 @@ class App(QWidget):
         # ------------------------------------------------------------------
         top = QHBoxLayout()
 
-        title = QLabel("Polar Ninja - Beta .08 - Designed by Dustin")
+        title = QLabel("Polar Ninja - Beta .08-1 - Designed by Dustin")
         title.setFont(QFont("Segoe UI", 12))
         top.addWidget(title)
         top.addStretch(1)
@@ -265,7 +265,7 @@ class App(QWidget):
         self.white_fade_t0 = None
 
         # --- Special case: CUE 19 -> CUE 20 tail fade + instant 20 ---
-        if prev == "19" and cid == "20":
+        if (prev == "19") and (cid == "20") and (self.audio._anchor_t is not None):
             # 1) Start CUE 20 on overlay channel at full volume
             path20 = self.cfg["songs"].get("20")
             self.audio.play_overlay(path20)
